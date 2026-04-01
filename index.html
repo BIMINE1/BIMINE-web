@@ -1244,10 +1244,53 @@
         }
 
         .contact-calendly {
-            background: var(--color-bg);
+            background: var(--color-bg-alt);
             border-radius: 16px;
             overflow: hidden;
-            min-height: 660px;
+            min-height: 700px;
+            border: 1px solid var(--color-border);
+        }
+
+        .calendly-header {
+            background: var(--color-primary);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .calendly-header-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(184, 132, 92, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .calendly-header-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--color-accent-light);
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .calendly-header-text h4 {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-white);
+            margin-bottom: 0.15rem;
+        }
+
+        .calendly-header-text p {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.5);
         }
 
         /* ============================================
@@ -2061,7 +2104,7 @@
         @media (max-width: 640px) {
             .val-section {
                 padding: clamp(40px, 8vw, 60px) 16px;
-                padding-bottom: 12px;
+                padding-bottom: clamp(30px, 6vw, 48px);
             }
             .val-body { padding: 1.5rem 1.25rem; }
             .val-footer { padding: 1rem 1.25rem; }
@@ -2085,10 +2128,10 @@
             .val-input { padding: 0.85rem 1rem; padding-right: 3.5rem; font-size: 1rem; }
             .val-option { padding: 0.8rem 0.75rem; font-size: 0.88rem; }
             .leadmagnet {
-                padding: 8px 0;
+                padding: clamp(30px, 6vw, 48px) 0;
             }
             .faq {
-                padding-top: 12px;
+                padding-top: clamp(30px, 6vw, 48px);
             }
         }
 
@@ -2313,18 +2356,24 @@
             }
 
             /* Process */
-            .process-steps { grid-template-columns: 1fr; gap: 2rem; }
+            .process-steps { grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+            .process-step:not(:last-child)::after { display: none; }
             .process-step {
-                display: grid;
-                grid-template-columns: 64px 1fr;
-                gap: 1rem;
-                text-align: left;
+                text-align: center;
             }
             .step-number {
-                margin: 0;
+                margin: 0 auto 0.75rem;
+                width: 48px;
+                height: 48px;
+                font-size: 1.1rem;
             }
-            .process-step h3, .process-step p {
-                text-align: left;
+            .process-step h3 {
+                font-size: 0.95rem;
+                margin-bottom: 0.3rem;
+            }
+            .process-step p {
+                font-size: 0.8rem;
+                line-height: 1.45;
             }
 
             /* About */
@@ -2379,8 +2428,14 @@
 
             /* Contact */
             .contact-calendly {
-                min-height: 560px;
+                min-height: 680px;
                 border-radius: 12px;
+            }
+            .calendly-header {
+                padding: 1rem 1.25rem;
+            }
+            .calendly-header-text h4 {
+                font-size: 0.92rem;
             }
             a.contact-method {
                 margin: 0 -0.75rem;
@@ -2446,6 +2501,20 @@
             }
             .score-number {
                 font-size: 2.2rem;
+            }
+            .process-steps {
+                gap: 1rem;
+            }
+            .step-number {
+                width: 42px;
+                height: 42px;
+                font-size: 1rem;
+            }
+            .process-step h3 {
+                font-size: 0.88rem;
+            }
+            .process-step p {
+                font-size: 0.75rem;
             }
         }
 
@@ -2956,8 +3025,16 @@
                     </div>
                 </div>
                 <div class="contact-calendly fade-in delay-2">
-                    <!-- Calendly inline widget -->
-                    <div class="calendly-inline-widget" data-url="https://calendly.com/bimine?hide_gdpr_banner=1&background_color=f1ece4&text_color=2d3748&primary_color=b8845c" style="min-width:100%;height:660px;"></div>
+                    <div class="calendly-header">
+                        <div class="calendly-header-icon">
+                            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        <div class="calendly-header-text">
+                            <h4>30 min konzultace zdarma</h4>
+                            <p>Vyberte si termín, který vám vyhovuje</p>
+                        </div>
+                    </div>
+                    <div class="calendly-inline-widget" data-url="https://calendly.com/bimine/30min?hide_gdpr_banner=1&hide_event_type_details=1&background_color=f1ece4&text_color=2d3748&primary_color=b8845c" style="min-width:100%;height:660px;"></div>
                 </div>
             </div>
         </div>
