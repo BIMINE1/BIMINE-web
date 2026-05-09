@@ -1907,6 +1907,37 @@
             font-weight: 400;
         }
 
+        .val-input.has-error {
+            border-color: rgba(220, 38, 38, 0.6);
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        .val-error {
+            display: none;
+            background: rgba(220, 38, 38, 0.12);
+            border: 1px solid rgba(220, 38, 38, 0.35);
+            color: #fca5a5;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            margin-top: 1rem;
+        }
+
+        .val-error.active {
+            display: block;
+            animation: valErrorIn 0.25s ease;
+        }
+
+        .val-error strong {
+            color: #fecaca;
+        }
+
+        @keyframes valErrorIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .val-unit {
             position: absolute;
             right: 1.25rem;
@@ -4777,13 +4808,14 @@
                 <div class="val-question">Jaké jsou vaše roční tržby a EBITDA?</div>
                 <div class="val-hint">EBITDA = zisk před úroky, daněmi a odpisy. Pokud neznáte přesně, odhadněte.</div>
                 <div class="val-input-group" style="margin-bottom: 1rem">
-                    <input type="text" class="val-input" placeholder="např. 145 000 000" value="${valData.revenue || ''}" oninput="valData.revenue = parseNum(this.value); formatValInput(this); checkValNext()" inputmode="numeric">
+                    <input id="valRevenueInput" type="text" class="val-input" placeholder="např. 145 000 000" value="${valData.revenue || ''}" oninput="valData.revenue = parseNum(this.value); formatValInput(this); checkValNext()" inputmode="numeric">
                     <span class="val-unit">Kč / rok</span>
                 </div>
                 <div class="val-input-group">
-                    <input type="text" class="val-input" placeholder="např. 25 000 000" value="${valData.ebitda || ''}" oninput="valData.ebitda = parseNum(this.value); formatValInput(this); checkValNext()" inputmode="numeric">
+                    <input id="valEbitdaInput" type="text" class="val-input" placeholder="např. 25 000 000" value="${valData.ebitda || ''}" oninput="valData.ebitda = parseNum(this.value); formatValInput(this); checkValNext()" inputmode="numeric">
                     <span class="val-unit">EBITDA</span>
                 </div>
+                <div id="valFinanceError" class="val-error"></div>
             </div>`,
 
             // Step 2: Years + Growth
@@ -4851,12 +4883,79 @@
         }
     }
 
+    function validateFinancials() {
+        const r = valData.revenue;
+        const e = valData.ebitda;
+
+        // Empty state — neither field filled, no error shown yet
+        if (r === 0 && e === 0) return { valid: false, error: null, badField: null };
+
+        // Only one field filled — wait for the other, no error yet
+        if (r === 0 || e === 0) return { valid: false, error: null, badField: null };
+
+        // Revenue too low — likely typo (missing zeros)
+        if (r < 1000000) {
+            return {
+                valid: false,
+                error: '<strong>Nerealistické tržby.</strong> Zadané tržby jsou nižší než 1 000 000 Kč. Tato kalkulačka je určena pro firmy s obratem od 10 mil. Kč. Zkontrolujte, zda jste nezapomněli na nuly (pište bez mezer, např. 145000000 pro 145 mil.).',
+                badField: 'revenue'
+            };
+        }
+
+        // EBITDA cannot exceed revenue (mathematically impossible)
+        if (e > r) {
+            return {
+                valid: false,
+                error: '<strong>EBITDA nemůže být vyšší než tržby.</strong> Zkontrolujte zadané hodnoty. EBITDA je část tržeb, která zbude po odečtení provozních nákladů.',
+                badField: 'ebitda'
+            };
+        }
+
+        // Margin too high (likely data entry error)
+        const margin = e / r;
+        if (margin > 0.5) {
+            return {
+                valid: false,
+                error: '<strong>EBITDA marže ' + Math.round(margin * 100) + ' % je nerealistická.</strong> Obvyklá marže ve většině odvětví je 5 až 25 %, výjimečně do 35 %. Zkontrolujte hodnoty, pravděpodobně je překlep v jednom z čísel.',
+                badField: 'ebitda'
+            };
+        }
+
+        // Margin too negative (firm in deep loss)
+        if (margin < -0.3) {
+            return {
+                valid: false,
+                error: '<strong>Záporná EBITDA více než 30 % tržeb.</strong> Tato kalkulačka pracuje s tržními násobky EBITDA a pro hluboce ztrátové firmy nedává smyslový výsledek. Pro takové případy si raději domluvte konzultaci.',
+                badField: 'ebitda'
+            };
+        }
+
+        return { valid: true, error: null, badField: null };
+    }
+
     function checkValNext() {
         const btn = document.getElementById('valNext');
         let valid = false;
         switch (valStep) {
             case 0: valid = valData.industry >= 0; break;
-            case 1: valid = valData.revenue > 0 && valData.ebitda > 0; break;
+            case 1: {
+                const v = validateFinancials();
+                valid = v.valid;
+                const errorEl = document.getElementById('valFinanceError');
+                const revInput = document.getElementById('valRevenueInput');
+                const ebInput = document.getElementById('valEbitdaInput');
+                if (errorEl) {
+                    if (v.error) {
+                        errorEl.innerHTML = v.error;
+                        errorEl.classList.add('active');
+                    } else {
+                        errorEl.classList.remove('active');
+                    }
+                }
+                if (revInput) revInput.classList.toggle('has-error', v.badField === 'revenue');
+                if (ebInput) ebInput.classList.toggle('has-error', v.badField === 'ebitda');
+                break;
+            }
             case 2: valid = valData.years !== '' && valData.growth !== ''; break;
             case 3: valid = valData.dependency !== ''; break;
         }
@@ -5111,6 +5210,18 @@
     }
 
     function revealValuation() {
+        // Defensive: re-validate financials in case DOM was tampered with or user got here some other way
+        const finValidation = validateFinancials();
+        if (!finValidation.valid) {
+            // Send user back to step 1 with error
+            valStep = 1;
+            renderValStep();
+            // Scroll to top of valuation card
+            const valCard = document.querySelector('.val-card');
+            if (valCard) valCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
         const name = document.getElementById('valName').value.trim();
         const email = document.getElementById('valEmail').value.trim();
         const phone = document.getElementById('valPhone').value.trim();
