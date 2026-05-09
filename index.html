@@ -2371,53 +2371,30 @@
         }
 
         .val-cta-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
+            display: flex;
+            justify-content: center;
             margin-top: 1.5rem;
         }
 
         .val-cta-primary {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.4rem;
-            padding: 0.9rem 1rem;
-            background: var(--color-primary);
+            padding: 0.9rem 2rem;
+            background: var(--color-accent);
             color: white;
             border-radius: 10px;
             text-decoration: none;
             font-weight: 600;
-            font-size: 0.92rem;
+            font-size: 0.95rem;
             transition: all 0.2s;
         }
 
         .val-cta-primary:hover {
-            background: var(--color-primary-light);
+            background: var(--color-accent-light);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(26,35,50,0.25);
-        }
-
-        .val-cta-secondary {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            padding: 0.9rem 1rem;
-            background: transparent;
-            color: rgba(255,255,255,0.8);
-            border: 2px solid rgba(255,255,255,0.15);
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.92rem;
-            transition: all 0.2s;
-        }
-
-        .val-cta-secondary:hover {
-            border-color: var(--color-accent);
-            color: var(--color-accent-light);
-            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(184, 132, 92, 0.35);
         }
 
         .val-disclaimer {
@@ -4074,8 +4051,8 @@
                     </div>
 
                     <div class="score-cta">
-                        <p>Chcete probrat výsledky osobně? Rezervujte si bezplatnou konzultaci.</p>
-                        <a href="#kontakt" class="btn btn-dark btn-arrow" onclick="closeScorecard()">Domluvit konzultaci</a>
+                        <p>Chcete probrat výsledky osobně? Rezervujte si konzultaci.</p>
+                        <a href="#kontakt" class="btn btn-primary btn-arrow" onclick="closeScorecard()">Domluvit konzultaci</a>
                     </div>
                 </div>
             `;
@@ -4128,7 +4105,7 @@
             };
 
             // Send to Google Apps Script → heinrich@bimine.cz
-            fetch('https://script.google.com/macros/s/AKfycbwlyW_MqJshYCxcmAlEpz-_hKa0bG_3tolhdZZItOCizNqP_2VFLcccPfhAEeCelcSf/exec', {
+            fetch('https://script.google.com/macros/s/AKfycbyzP97_wLaxVg6iZw8_noeI28DPGFAlgAWpHrt56UxhszVHoPHqvHA13yxtqMCJL0K4/exec', {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
@@ -4642,8 +4619,8 @@
                         </div>
 
                         <div class="score-cta">
-                            <p>Chcete probrat výsledky osobně? Rezervujte si bezplatnou konzultaci.</p>
-                            <a href="#kontakt" class="btn btn-dark btn-arrow" onclick="close${prefix.charAt(0).toUpperCase() + prefix.slice(1)}()">Domluvit konzultaci</a>
+                            <p>Chcete probrat výsledky osobně? Rezervujte si konzultaci.</p>
+                            <a href="#kontakt" class="btn btn-primary btn-arrow" onclick="close${prefix.charAt(0).toUpperCase() + prefix.slice(1)}()">Domluvit konzultaci</a>
                         </div>
                     </div>
                 `;
@@ -4728,7 +4705,7 @@
                 critical: { threshold: 0, label: "Strukturální výzvy, ale řešitelné", desc: "Firma je silně závislá na zakladateli a chybí jí provozní páteř pro růst. Pojďme se pobavit o tom, jak na tom reálně jste a co udělat jako první krok, který přinese největší změnu." }
             },
             "Růstová zralost",
-            "https://script.google.com/macros/s/AKfycbwlyW_MqJshYCxcmAlEpz-_hKa0bG_3tolhdZZItOCizNqP_2VFLcccPfhAEeCelcSf/exec"
+            "https://script.google.com/macros/s/AKfycbyzP97_wLaxVg6iZw8_noeI28DPGFAlgAWpHrt56UxhszVHoPHqvHA13yxtqMCJL0K4/exec"
         );
 
         // Initialize CFO scorecard
@@ -4749,7 +4726,7 @@
                 critical: { threshold: 0, label: "Strukturální mezery ve financích", desc: "Finance jsou aktuálně reaktivní, ne strategické. Pro stabilitu firmy a její další vývoj je klíčové nastavit cash flow forecast, reporting a finanční plán. Pojďme probrat, kde začít, aby to dávalo smysl." }
             },
             "Finanční zralost",
-            "https://script.google.com/macros/s/AKfycbwlyW_MqJshYCxcmAlEpz-_hKa0bG_3tolhdZZItOCizNqP_2VFLcccPfhAEeCelcSf/exec"
+            "https://script.google.com/macros/s/AKfycbyzP97_wLaxVg6iZw8_noeI28DPGFAlgAWpHrt56UxhszVHoPHqvHA13yxtqMCJL0K4/exec"
         );
 
         // ======================
@@ -5122,7 +5099,6 @@
 
                     <div class="val-cta-grid val-revealed" style="animation-delay:0.3s">
                         <a href="#kontakt" class="val-cta-primary">Domluvit konzultaci &rarr;</a>
-                        <a href="#scorecard" class="val-cta-secondary">Vyzkoušet Exit zralost</a>
                     </div>
 
                     <div class="val-disclaimer">
@@ -5189,7 +5165,7 @@
             date: new Date().toISOString()
         };
 
-        fetch('https://script.google.com/macros/s/AKfycbwlyW_MqJshYCxcmAlEpz-_hKa0bG_3tolhdZZItOCizNqP_2VFLcccPfhAEeCelcSf/exec', {
+        fetch('https://script.google.com/macros/s/AKfycbyzP97_wLaxVg6iZw8_noeI28DPGFAlgAWpHrt56UxhszVHoPHqvHA13yxtqMCJL0K4/exec', {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
