@@ -5301,6 +5301,130 @@
             localStorage.setItem('bimine_cookies', choice);
             document.getElementById('cookieBar').classList.remove('show');
         }
+
+        // ======================
+        // DEEP LINK ROUTING
+        // ======================
+        // Supports URLs from emails/newsletters like:
+        //   https://bimine.cz/Sluzby            → scrolls to services
+        //   https://bimine.cz/Exit zralost      → opens Exit widget
+        //   https://bimine.cz/Rustova zralost   → opens COO widget
+        //   https://bimine.cz/Financni zralost  → opens CFO widget
+        //   https://bimine.cz/Valuace           → scrolls to valuation
+        //   https://bimine.cz/O mne             → scrolls to about
+        //   https://bimine.cz/Jak to funguje    → scrolls to process
+        //   https://bimine.cz/FAQ               → scrolls to FAQ
+        //
+        // Also works with: lowercase, hyphens, no diacritics, %20, +, hash (#)
+        // GitHub Pages serves 404.html for unknown paths; that redirects here.
+        // ======================
+        (function setupRouting() {
+            // Normalize: lowercase, strip diacritics, replace separators with single space
+            function normalize(s) {
+                if (!s) return '';
+                try { s = decodeURIComponent(s); } catch (e) {}
+                return s
+                    .replace(/^[\/#]+|[\/#]+$/g, '')   // trim leading/trailing / and #
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
+                    .replace(/[-+_]/g, ' ')             // separators → space
+                    .replace(/\s+/g, ' ')               // collapse whitespace
+                    .trim();
+            }
+
+            // Each route entry maps a normalized key to an action
+            const routes = {
+                // Sections
+                'sluzby':           { type: 'scroll', target: 'sluzby' },
+                'jak to funguje':   { type: 'scroll', target: 'jak-to-funguje' },
+                'o mne':            { type: 'scroll', target: 'o-mne' },
+                'valuace':          { type: 'scroll', target: 'valuace' },
+                'faq':              { type: 'scroll', target: 'faq' },
+                'kontakt':          { type: 'scroll', target: 'kontakt' },
+                'reference':        { type: 'scroll', target: 'reference' },
+                'proc':             { type: 'scroll', target: 'proc' },
+                // Widget triggers
+                'rustova zralost':  { type: 'widget', fn: 'openCoo' },
+                'financni zralost': { type: 'widget', fn: 'openCfo' },
+                'exit zralost':     { type: 'widget', fn: 'openScorecard' }
+            };
+
+            function findRoute(raw) {
+                if (!raw) return null;
+                const key = normalize(raw);
+                if (!key) return null;
+                if (routes[key]) return routes[key];
+                // Tolerate "scorecard" alias from old hashtags
+                if (key === 'diagnosticke nastroje' || key === 'scorecard') {
+                    return { type: 'scroll', target: 'scorecard' };
+                }
+                return null;
+            }
+
+            function executeRoute(route) {
+                if (!route) return;
+                if (route.type === 'scroll') {
+                    const el = document.getElementById(route.target);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } else if (route.type === 'widget') {
+                    if (typeof window[route.fn] === 'function') {
+                        window[route.fn]();
+                    }
+                }
+            }
+
+            // Determine which source contains the route info, in priority order:
+            //   1. sessionStorage marker set by 404.html (path-based deep link)
+            //   2. window.location.pathname (if someone visits / and pathname has segments)
+            //   3. window.location.hash (e.g. #exit-zralost)
+            function resolveRoute() {
+                // 1. 404 fallback marker
+                let stored = null;
+                try { stored = sessionStorage.getItem('bimineRoute'); } catch (e) {}
+                if (stored) {
+                    try { sessionStorage.removeItem('bimineRoute'); } catch (e) {}
+                    const r = findRoute(stored);
+                    if (r) return r;
+                }
+
+                // 2. URL pathname (in case server-rewrite serves index.html for unknown path)
+                if (window.location.pathname && window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                    const r = findRoute(window.location.pathname);
+                    if (r) return r;
+                }
+
+                // 3. Hash fragment
+                if (window.location.hash) {
+                    const r = findRoute(window.location.hash);
+                    if (r) return r;
+                }
+
+                return null;
+            }
+
+            // Wait for DOM + widgets to be ready, then execute
+            function run() {
+                const route = resolveRoute();
+                if (route) {
+                    // Delay slightly to let layout settle (especially for widgets which need their event listeners)
+                    setTimeout(function() { executeRoute(route); }, 250);
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', run);
+            } else {
+                run();
+            }
+
+            // Also react to hashchange (e.g. user clicks /#exit-zralost link while on the page)
+            window.addEventListener('hashchange', function() {
+                const r = findRoute(window.location.hash);
+                if (r) executeRoute(r);
+            });
+        })();
     </script>
 </body>
 </html>
