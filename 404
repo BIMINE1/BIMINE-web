@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIMINE</title>
+    <meta name="robots" content="noindex,nofollow">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #1a2332;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+        }
+        .wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .logo span { color: #d4a574; }
+        .msg {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            margin-top: 12px;
+        }
+    </style>
+    <script>
+        // BIMINE deep-link router fallback
+        // GitHub Pages serves this file for any path that does not match a real file.
+        // We capture the requested path, store it in sessionStorage, and redirect to "/"
+        // where the main JS reads it and performs the requested action (scroll or open widget).
+        (function () {
+            try {
+                var path = window.location.pathname + window.location.search + window.location.hash;
+                if (path && path !== '/' && path !== '/index.html') {
+                    sessionStorage.setItem('bimineRoute', path);
+                }
+            } catch (e) { /* sessionStorage may be unavailable, fall through */ }
+
+            // Build the redirect URL: just "/" (the homepage). The router in index.html reads sessionStorage.
+            // Preserve query string if present, but use canonical root path.
+            var redirectUrl = window.location.origin + '/';
+            window.location.replace(redirectUrl);
+        })();
+    </script>
+</head>
+<body>
+    <div class="wrap">
+        <div class="logo">BIMINE<span>.</span></div>
+        <div class="msg">Načítání…</div>
+    </div>
+</body>
+</html>
