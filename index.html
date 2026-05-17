@@ -5425,6 +5425,104 @@
                 if (r) executeRoute(r);
             });
         })();
+
+        /* =====================================================================
+           HASH HANDLER — auto-open scorecard modal z URL hashe + úklid hashe
+           ---------------------------------------------------------------------
+           - Když URL obsahuje #scorecard / #exit-zralost / #exit-audit / #exit,
+             handler doskroluje na sekci a po 350 ms otevře Exit modal.
+           - Když uživatel modal zavře, hash se vyčistí z URL (refresh
+             modal znovu neotevře).
+           - Pracuje vedle existujícího routing systému výše. U hashů jako
+             #exit-zralost se openScorecard zavolá dvakrát (z obou systémů) —
+             funkce je idempotentní, žádný funkční problém.
+           ===================================================================== */
+        (function() {
+            var HASH_MAP = {
+                '#scorecard':    'openScorecard',
+                '#exit-zralost': 'openScorecard',
+                '#exit-audit':   'openScorecard',
+                '#exit':         'openScorecard'
+            };
+
+            var MODAL_OVERLAY_ID = 'scorecardOverlay';
+            var FALLBACK_SECTION_ID = 'scorecard';
+
+            function callOpener(fnName) {
+                if (typeof window[fnName] === 'function') {
+                    try {
+                        window[fnName]();
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                return false;
+            }
+
+            function handleHash() {
+                var hash = window.location.hash;
+                if (!hash) return;
+
+                var fnName = HASH_MAP[hash];
+                if (!fnName) return;
+
+                // Pokud hash neodpovídá existujícímu elementu, doskrolujeme na fallback sekci
+                var target = document.getElementById(hash.substring(1));
+                if (!target) {
+                    var fallback = document.getElementById(FALLBACK_SECTION_ID);
+                    if (fallback) {
+                        fallback.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+
+                // Otevři modal po krátkém delay, aby se ustálily fade-in animace a layout
+                setTimeout(function() {
+                    if (!callOpener(fnName)) {
+                        setTimeout(function() { callOpener(fnName); }, 600);
+                    }
+                }, 350);
+            }
+
+            function watchModalClose() {
+                var overlay = document.getElementById(MODAL_OVERLAY_ID);
+                if (!overlay || typeof MutationObserver === 'undefined') return;
+
+                var observer = new MutationObserver(function(mutations) {
+                    for (var i = 0; i < mutations.length; i++) {
+                        var m = mutations[i];
+                        if (m.attributeName !== 'class') continue;
+
+                        var wasOpen = m.oldValue && m.oldValue.indexOf('active') !== -1;
+                        var isOpen = overlay.classList.contains('active');
+
+                        if (wasOpen && !isOpen && HASH_MAP[window.location.hash]) {
+                            var cleanUrl = window.location.pathname + window.location.search;
+                            history.replaceState(null, '', cleanUrl);
+                        }
+                    }
+                });
+
+                observer.observe(overlay, {
+                    attributes: true,
+                    attributeOldValue: true,
+                    attributeFilter: ['class']
+                });
+            }
+
+            function init() {
+                handleHash();
+                watchModalClose();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+            window.addEventListener('hashchange', handleHash);
+        })();
     </script>
 </body>
 </html>
