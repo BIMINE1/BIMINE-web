@@ -45,6 +45,92 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Plausible Analytics (GDPR-friendly, no cookies) -->
     <script defer data-domain="bimine.cz" src="https://plausible.io/js/script.js"></script>
+
+    <!-- ============ Google tag (gtag.js) + Consent Mode v2 ============
+         Měří: návštěvy z UTM (utm_source/medium/campaign), pageviews,
+         scroll depth, time on page, custom events (scorecard, valuace,
+         outbound, Calendly). Default deny dle GDPR, granted po souhlasu.
+         ================================================================ -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+
+        // Default: vše denied (EU/GDPR-safe), wait_for_update kvůli načtení cookie baru
+        gtag('consent', 'default', {
+            'ad_storage': 'denied',
+            'ad_user_data': 'denied',
+            'ad_personalization': 'denied',
+            'analytics_storage': 'denied',
+            'wait_for_update': 500
+        });
+
+        // Pokud uživatel již dříve dal souhlas, povol ještě před načtením GA
+        try {
+            var __bimineCookieChoice = localStorage.getItem('bimine_cookies');
+            if (__bimineCookieChoice === 'accept' || __bimineCookieChoice === 'accepted') {
+                gtag('consent', 'update', {
+                    'ad_storage': 'granted',
+                    'ad_user_data': 'granted',
+                    'ad_personalization': 'granted',
+                    'analytics_storage': 'granted'
+                });
+            }
+        } catch (e) {}
+
+        gtag('js', new Date());
+
+        // Konfigurace GA4 property
+        gtag('config', 'G-CJD8NR3ZGE', {
+            'anonymize_ip': true,
+            'send_page_view': true
+        });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-CJD8NR3ZGE"></script>
+
+    <!-- ============ UTM zachycení + jednotný tracking helper ============
+         Zachytí UTM z URL (z e-mailů: utm_source=email&utm_medium=outreach
+         &utm_campaign=exit-audit), uloží do sessionStorage a přibalí je
+         ke všem custom eventům. Tím se v GA4 dají snadno filtrovat
+         konverze podle kampaně i po několika kliknutích na stránce.
+         =================================================================== -->
+    <script>
+        (function() {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var utmKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+                var captured = {};
+                var hasNew = false;
+                utmKeys.forEach(function(k) {
+                    var v = params.get(k);
+                    if (v) { captured[k] = v; hasNew = true; }
+                });
+                if (hasNew) {
+                    sessionStorage.setItem('bimine_utm', JSON.stringify(captured));
+                }
+            } catch (e) {}
+        })();
+
+        // Globální helper pro odesílání custom eventů do GA4
+        // - vždy přibalí aktuální UTM (pokud jsou v sessionStorage)
+        // - bezpečné i v případě, že gtag ještě není načtený / byl zablokován
+        window.bimineTrack = function(eventName, params) {
+            try {
+                var payload = Object.assign({}, params || {});
+                try {
+                    var utm = JSON.parse(sessionStorage.getItem('bimine_utm') || '{}');
+                    Object.keys(utm).forEach(function(k) {
+                        if (!(k in payload)) payload[k] = utm[k];
+                    });
+                } catch (e) {}
+                if (typeof gtag === 'function') {
+                    gtag('event', eventName, payload);
+                }
+            } catch (e) {
+                // Tracking selhal, nikdy nesmí shodit zbytek stránky
+            }
+        };
+    </script>
+
     <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
     <style>
         /* ============================================
@@ -3938,6 +4024,9 @@
             renderScStep();
             document.getElementById('scorecardOverlay').classList.add('active');
             document.body.style.overflow = 'hidden';
+            if (typeof bimineTrack === 'function') {
+                bimineTrack('widget_open', { widget_type: 'exit_readiness' });
+            }
         }
 
         function closeScorecard() {
@@ -4143,6 +4232,21 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             }).catch(err => console.log('GAS error:', err));
+
+            // GA4 conversion event
+            if (typeof bimineTrack === 'function') {
+                bimineTrack('scorecard_complete', {
+                    scorecard_type: 'exit_readiness',
+                    total_score: scTotalScore,
+                    max_score: 45,
+                    score_pct: Math.round((scTotalScore / 45) * 100)
+                });
+                bimineTrack('generate_lead', {
+                    lead_source: 'exit_readiness_scorecard',
+                    value: 1,
+                    currency: 'CZK'
+                });
+            }
 
             document.getElementById('scoreEmailForm').style.display = 'none';
             document.getElementById('scoreSuccess').style.display = 'block';
@@ -4521,6 +4625,14 @@
                 render();
                 $(prefix + 'Overlay').classList.add('active');
                 document.body.style.overflow = 'hidden';
+                if (typeof bimineTrack === 'function') {
+                    // prefix je 'coo' nebo 'cfo' → mapujeme na čitelný widget_type
+                    var widgetMap = { coo: 'growth_readiness', cfo: 'finance_readiness' };
+                    bimineTrack('widget_open', {
+                        widget_type: widgetMap[prefix] || prefix,
+                        scorecard_name: scorecardName
+                    });
+                }
             }
 
             function close() {
@@ -4697,6 +4809,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 }).catch(err => console.log('GAS error:', err));
+
+                // GA4 conversion event
+                if (typeof bimineTrack === 'function') {
+                    var widgetMap = { coo: 'growth_readiness', cfo: 'finance_readiness' };
+                    var maxScore = categories.reduce(function(sum, c) { return sum + c.max; }, 0);
+                    bimineTrack('scorecard_complete', {
+                        scorecard_type: widgetMap[prefix] || prefix,
+                        scorecard_name: scorecardName,
+                        total_score: totalScore,
+                        max_score: maxScore,
+                        score_pct: Math.round((totalScore / maxScore) * 100)
+                    });
+                    bimineTrack('generate_lead', {
+                        lead_source: (widgetMap[prefix] || prefix) + '_scorecard',
+                        value: 1,
+                        currency: 'CZK'
+                    });
+                }
 
                 $(prefix + 'EmailForm').style.display = 'none';
                 $(prefix + 'Success').style.display = 'block';
@@ -5283,6 +5413,25 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).catch(err => console.log('GAS error:', err));
+
+        // GA4 conversion event (vyplnění kontaktního formuláře = lead)
+        if (typeof bimineTrack === 'function') {
+            bimineTrack('valuation_complete', {
+                industry: result.industry.name,
+                revenue: valData.revenue,
+                ebitda: valData.ebitda,
+                growth: valData.growth,
+                dependency: valData.dependency,
+                valuation_low: result.low,
+                valuation_high: result.high
+            });
+            bimineTrack('generate_lead', {
+                lead_source: 'valuation_calculator',
+                industry: result.industry.name,
+                value: 1,
+                currency: 'CZK'
+            });
+        }
     }
 
     // Init
@@ -5300,6 +5449,29 @@
         function cookieDecision(choice) {
             localStorage.setItem('bimine_cookies', choice);
             document.getElementById('cookieBar').classList.remove('show');
+
+            // Propaguj rozhodnutí do Google Consent Mode v2
+            if (typeof gtag === 'function') {
+                if (choice === 'accept' || choice === 'accepted') {
+                    gtag('consent', 'update', {
+                        'ad_storage': 'granted',
+                        'ad_user_data': 'granted',
+                        'ad_personalization': 'granted',
+                        'analytics_storage': 'granted'
+                    });
+                } else {
+                    gtag('consent', 'update', {
+                        'ad_storage': 'denied',
+                        'ad_user_data': 'denied',
+                        'ad_personalization': 'denied',
+                        'analytics_storage': 'denied'
+                    });
+                }
+            }
+
+            if (typeof bimineTrack === 'function') {
+                bimineTrack('cookie_decision', { decision: choice });
+            }
         }
 
         // ======================
@@ -5522,6 +5694,133 @@
             }
 
             window.addEventListener('hashchange', handleHash);
+        })();
+
+        /* =====================================================================
+           ENGAGEMENT TRACKER — GA4 custom events
+           ---------------------------------------------------------------------
+           Sleduje:
+           - section_view  : první vstup do klíčových sekcí (#scorecard, #sluzby,
+                             #kontakt, #valuace, #o-mne, #jak-to-funguje)
+           - cta_click     : kliknutí na "Domluvit konzultaci" / "Nezávazná
+                             konzultace" / "Spustit" tlačítka
+           - outbound_click: kliknutí na externí odkazy (LinkedIn, e-mail, tel)
+           - calendly_*    : Calendly události z postMessage (date_and_time,
+                             event_scheduled = booking)
+           Všechny eventy nesou aktuální UTM (díky bimineTrack helperu).
+           ===================================================================== */
+        (function() {
+            if (typeof bimineTrack !== 'function') return;
+
+            // ---- 1) Section views (IntersectionObserver, fire jednou per session) ----
+            var trackedSections = ['sluzby','scorecard','valuace','kontakt','o-mne','jak-to-funguje','proc','reference','faq'];
+            var seen = {};
+            if ('IntersectionObserver' in window) {
+                var io = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+                            var id = entry.target.id;
+                            if (id && !seen[id]) {
+                                seen[id] = true;
+                                bimineTrack('section_view', { section: id });
+                            }
+                        }
+                    });
+                }, { threshold: [0.4] });
+
+                trackedSections.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) io.observe(el);
+                });
+            }
+
+            // ---- 2) CTA + outbound + LinkedIn kliknutí (event delegation) ----
+            document.addEventListener('click', function(e) {
+                var a = e.target.closest('a, button');
+                if (!a) return;
+
+                var href = a.getAttribute('href') || '';
+                var label = (a.textContent || '').trim().substring(0, 60);
+
+                // Externí odkazy (LinkedIn, mailto, tel, calendly direct)
+                if (a.tagName === 'A' && href) {
+                    var isExternal = /^https?:\/\//i.test(href) && href.indexOf(window.location.hostname) === -1;
+                    var isLinkedIn = href.indexOf('linkedin.com') !== -1;
+                    var isMail = href.indexOf('mailto:') === 0;
+                    var isTel  = href.indexOf('tel:') === 0;
+
+                    if (isLinkedIn) {
+                        bimineTrack('outbound_click', { dest: 'linkedin', url: href, label: label });
+                    } else if (isMail) {
+                        bimineTrack('outbound_click', { dest: 'email', url: href, label: label });
+                    } else if (isTel) {
+                        bimineTrack('outbound_click', { dest: 'phone', url: href, label: label });
+                    } else if (isExternal) {
+                        bimineTrack('outbound_click', { dest: 'other', url: href, label: label });
+                    }
+                }
+
+                // CTA kliknutí (primární tlačítka)
+                if (a.classList && (a.classList.contains('btn-primary') || a.classList.contains('nav-cta'))) {
+                    bimineTrack('cta_click', {
+                        cta_label: label,
+                        cta_target: href || (a.getAttribute('onclick') || '').substring(0, 60)
+                    });
+                }
+            }, { passive: true });
+
+            // ---- 3) Calendly události (postMessage z iframe) ----
+            // Kalendář bookingu je hlavní konverze — sleduje jak interakce
+            // tak finální rezervaci schůzky.
+            window.addEventListener('message', function(e) {
+                try {
+                    if (!e.data || typeof e.data !== 'object') return;
+                    var ev = e.data.event;
+                    if (!ev || ev.indexOf('calendly') !== 0) return;
+
+                    if (ev === 'calendly.profile_page_viewed') {
+                        bimineTrack('calendly_view', {});
+                    } else if (ev === 'calendly.event_type_viewed') {
+                        bimineTrack('calendly_event_type_viewed', {});
+                    } else if (ev === 'calendly.date_and_time_selected') {
+                        bimineTrack('calendly_time_selected', {});
+                    } else if (ev === 'calendly.event_scheduled') {
+                        // HLAVNÍ KONVERZE = rezervace schůzky
+                        bimineTrack('meeting_booked', {
+                            source: 'calendly',
+                            value: 1,
+                            currency: 'CZK'
+                        });
+                        bimineTrack('generate_lead', {
+                            lead_source: 'calendly_booking',
+                            value: 1,
+                            currency: 'CZK'
+                        });
+                    }
+                } catch (err) {}
+            }, false);
+
+            // ---- 4) Scroll depth (25/50/75/90 %) ----
+            var depths = [25, 50, 75, 90];
+            var firedDepths = {};
+            var ticking = false;
+            window.addEventListener('scroll', function() {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(function() {
+                    var h = document.documentElement;
+                    var scrolled = (h.scrollTop || document.body.scrollTop);
+                    var total = (h.scrollHeight || document.body.scrollHeight) - h.clientHeight;
+                    var pct = total > 0 ? Math.round((scrolled / total) * 100) : 0;
+                    depths.forEach(function(d) {
+                        if (pct >= d && !firedDepths[d]) {
+                            firedDepths[d] = true;
+                            bimineTrack('scroll_depth', { percent: d });
+                        }
+                    });
+                    ticking = false;
+                });
+            }, { passive: true });
         })();
     </script>
 </body>
